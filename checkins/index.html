@@ -34,8 +34,7 @@
 			function getCheckins(){
 				var count = 0,
 					n = 0,
-					checkins = [],
-					beforeTimestamp;
+					checkins = [];
 
 				var iter = function(){
 					_getCheckins(
@@ -43,8 +42,6 @@
 							checkins = checkins.concat(next.items);
 							count = next.count;
 							n += next.items.length;
-							console.log(checkins);
-							beforeTimestamp = checkins[n-1].createdAt;
 
 							$("#box").text("loading... " + n + "/" + count + "checkins");
 							
@@ -54,16 +51,16 @@
 								listVenueHistory(count, checkins);
 							}
 						},
-						beforeTimestamp
+						n
 					);
 				}
 
 				iter();
 			}
 
-			function _getCheckins(callback, before){
+			function _getCheckins(callback, offset){
 				fsq.getRequest(
-					'users/self/checkins?limit=250' + ((before) ? '&beforeTimestamp=' + before : ""),
+					'users/self/checkins?limit=250' + ((offset) ? '&offset=' + offset : ""),
 					function (response){
 						console.log(response);
 						callback(response.response.checkins);
