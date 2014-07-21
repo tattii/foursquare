@@ -68,6 +68,15 @@
 			$("#connect").click(function(){
 				Foursquare();
 			});
+
+			var query = getAnchorQuery();
+			if ( query.access_token ){
+				$("#token").text( query.access_token );
+				alert("authentication successed");
+
+			}else if ( query.error ){
+				alert("authentication faild");
+			}
 		});
 
 	</script>
