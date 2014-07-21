@@ -1,0 +1,65 @@
+<!DOCCTYPE HTML>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>foursquare / venue history</title>
+</head>
+
+
+<body>
+	<h1>get venue history</h1>
+
+	<button id="get">get</button>
+	<br>
+	<div id="box"></div>
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script src="../foursquare.js"></script>
+	<script>
+		$(function(){
+			var fsq = new Foursquare;
+			if ( fsq.access_token ){
+				getVenueHistory();
+			}
+
+			$("#get").click(function(){
+				fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+			});
+			
+			
+			function getVenueHistory(){
+				fsq.getRequest(
+					'users/self/venuehistory',
+					function (response){
+						console.log(response);
+						listVenueHistory(response.response.venues);
+					}
+				);
+			}
+
+			function listVenueHistory(venues){
+				$("#box").append("<p>" + venues.count + "spot</p>");
+				$("#box").append('<ul id="list"></ul>');
+
+				for (var i = 0; i < venues.items.length; i++){
+					var venue = venues.items[i];
+					$("#list").append(
+						'<li>' +
+						'<a href="https://ja.foursquare.com/v/' + venue.venue.id + '">' +
+						venue.venue.name + '</a>' +
+						venue.beenHere +
+						'</li>'
+					);
+				}
+			}
+
+
+		});
+
+
+	</script>
+</body>
+
+</html>
+
