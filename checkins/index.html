@@ -1,0 +1,100 @@
+<!DOCCTYPE HTML>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>foursquare / checkins</title>
+</head>
+
+
+<body>
+	<h1>get checkins</h1>
+
+	<button id="get">get</button>
+	<br>
+	<div id="box"></div>
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script src="../foursquare.js"></script>
+	<script>
+		$(function(){
+			var fsq = new Foursquare;
+
+			if ( fsq.access_token ){
+				getCheckins();
+			}
+
+			$("#get").click(function(){
+				fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+				$("#box").html("");
+				getCheckins();
+			});
+			
+
+			function getCheckins(){
+				var count = 0,
+					n = 0,
+					checkins = [],
+					beforeTimestamp;
+
+				var iter = function(){
+					_getCheckins(
+						function(next){
+							checkins = checkins.concat(next.items);
+							count = next.count;
+							n += next.items.length;
+							console.log(checkins);
+							beforeTimestamp = checkins[n-1].createdAt;
+
+							$("#box").text("loading... " + n + "/" + count + "checkins");
+							
+							if ( n < count ){
+								iter();
+							}else{
+								listVenueHistory(count, checkins);
+							}
+						},
+						beforeTimestamp
+					);
+				}
+
+				iter();
+			}
+
+			function _getCheckins(callback, before){
+				fsq.getRequest(
+					'users/self/checkins?limit=250' + ((before) ? '&beforeTimestamp=' + before : ""),
+					function (response){
+						console.log(response);
+						callback(response.response.checkins);
+					}
+				);
+			}
+
+			function listVenueHistory(count, checkins){
+				$("#box").html("<p>" + count + "checkins</p>");
+				$("#box").append('<ul id="list"></ul>');
+
+				for (var i = 0; i < checkins.length; i++){
+					var checkin = checkins[i];
+					var time = new Date(checkin.createdAt * 1000);
+
+					$("#list").append(
+						'<li>' + (i+1)  + ": " +
+						'<a href="https://ja.foursquare.com/v/' + checkin.venue.id + '">' +
+						checkin.venue.name + '</a> ' +
+						time.toLocaleString() +
+						'</li>'
+					);
+				}
+			}
+
+
+		});
+
+
+	</script>
+</body>
+
+</html>
+
