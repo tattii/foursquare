@@ -6,15 +6,17 @@
 		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 		<script src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
 		<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.css" />
-		<style>
-			body { margin:0; padding:0; }
-			#map { position:absolute; top:0; bottom:0; width:100%; }
-			#get { position:absolute; top:20px; right:20px; width:100px; height:40px; background:#fff; z-index:10001;  }
-		</style>
+		<link rel="stylesheet" href="app.css" />
 	</head>
 	<body>
+		<h1>Heatmap - Foursquare</h1>
+		<div id="info">Visualize your checkins</div>
 		<div id='map'></div>
-		<div id="get">get</div>
+		<div id="start">Start</div>
+
+
+
+
 
 		<script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet-src.js"></script>
 		<script src="../foursquare.js"></script>
@@ -37,22 +39,48 @@
 				var fsq = new Foursquare;
 				if ( fsq.access_token ){
 					getVenueHistory();
+					getUserInfo();
+					$("#start").remove();
 
 				}else{
 					map = L.map('map')
 					.addLayer(mapboxTiles)
 					.setView([38.23, 138.933], 6);
+					map.zoomControl.setPosition("bottomleft");
 				}
 
-				$("#get").click(function(){
+				$("#start").click(function(){
 					fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
 				});
 
 
+				//-------------------------------------------------------------
+				function getVenueHistory(){
+					fsq.getRequest(
+						'users/self/venuehistory',
+						function (response){
+							venues = response.response.venues;
+
+							for (var i = 0; i < venues.items.length; i++){
+								var venue = venues.items[i];
+								var location = venue.venue.location;
+								venue_history.push({
+									lat: location.lat,
+									lon: location.lng,
+									value: venue.beenHere + 3
+								});
+							}
+							console.log(venue_history);
+							drawHeatmap();
+						}
+					);
+				}
+
+				
 				// heatmap ----------------------------------------------------
 				function drawHeatmap() {
 					var heatmapLayer = L.TileLayer.heatMap({
-						radius: { value: 10, absolute: false },
+						radius: { value: 11, absolute: false },
 						opacity: 0.8
 					});
 
@@ -62,28 +90,42 @@
 						zoom: 6,
 						layers: [mapboxTiles, heatmapLayer]
 					});
+					map.zoomControl.setPosition("bottomleft");
+
 				}
 
 
-				function getVenueHistory(){
+				function getUserInfo() {
+					var count, first, last;
 					fsq.getRequest(
-					'users/self/venuehistory',
-					function (response){
-						venues = response.response.venues;
+						'users/self/checkins',
+						function (response){
+							count = response.response.checkins.count;
+							last = response.response.checkins.items[0].createdAt;
+							fsq.getRequest(
+								'users/self/checkins?sort=oldestfirst',
+								function (response){
+									first = response.response.checkins.items[0].createdAt;
 
-						for (var i = 0; i < venues.items.length; i++){
-							var venue = venues.items[i];
-							var location = venue.venue.location;
-							venue_history.push({
-								lat: location.lat,
-								lon: location.lng,
-								value: venue.beenHere + 2
-							});
+
+									$("#info").html(
+										format_time(first) +
+										" - " +
+										format_time(last) +
+										"<br>" +
+										count + " checkins"
+									);
+
+								}
+							);
 						}
-						console.log(venue_history);
-						drawHeatmap();
-					}
 					);
+				}
+
+
+				function format_time(time){
+					var date = new Date(time*1000);
+					return date.toLocaleDateString() + " " + date.getHours() + ":" + date.getMinutes();
 				}
 
 			});
