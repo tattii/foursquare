@@ -30,11 +30,13 @@
 			$(function(){
 				var center = [38.23, 138.933],
 					zoom = 6,
+					zoomControl = true,
 					radius = 11;
 			
 				if ( $(window).width() <= 480 ){
 					center = [37.405, 137.50];
 					zoom = 5;
+					zoomControl = false;
 					radius = 6;
 				}
 
@@ -58,10 +60,10 @@
 					getUserInfo();
 
 				}else{
-					map = L.map('map')
-					.addLayer(mapboxTiles)
-					.setView(center, zoom);
-					map.zoomControl.setPosition("bottomleft");
+					map = L.map('map', { zoomControl: zoomControl })
+						.addLayer(mapboxTiles)
+						.setView(center, zoom);
+					(zoomControl) ? map.zoomControl.setPosition("bottomleft") : 0;
 				}
 
 				$("#start").click(function(){
@@ -103,9 +105,10 @@
 					map = new L.Map('map', {
 						center: center,
 						zoom: zoom,
-						layers: [mapboxTiles, heatmapLayer]
+						layers: [mapboxTiles, heatmapLayer],
+						zoomControl: zoomControl
 					});
-					map.zoomControl.setPosition("bottomleft");
+					(zoomControl) ? map.zoomControl.setPosition("bottomleft") : 0;
 
 					complete();
 				}
