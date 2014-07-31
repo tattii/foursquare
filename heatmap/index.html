@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8 />
+		<title>Foursquare - Heatmap</title>
+		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+		<script src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
+		<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.css" />
+		<link rel="stylesheet" href="app.css" />
+	</head>
+	<body>
+		<h1>Foursquare Heatmap</h1>
+		<div id="init">Visualize your checkins</div>
+		<div id="info"></div>
+		<div id='map'></div>
+		<div id="start">Start</div>
+		<div id="loading"></div>
+
+
+
+
+
+		<script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet-src.js"></script>
+		<script src="../foursquare.js"></script>
+		<script src="/foursquare/lib/heatmap/QuadTree.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap-leaflet.js"></script>
+		<script src="/foursquare/lib/sonic.js"></script>
+		<script>
+			$(function(){
+				var center = [38.23, 138.933],
+					zoom = 6,
+					radius = 11;
+			
+				if ( $(window).width() <= 480 ){
+					center = [37.405, 137.50];
+					zoom = 5;
+					radius = 6;
+				}
+
+
+				// mapbox -----------------------------------------------------
+				var map;
+				var map_id = 'tattii.j1a9fl0a';
+				var mapboxTiles = L.tileLayer(
+					'https://{s}.tiles.mapbox.com/v3/' + map_id + '/{z}/{x}/{y}.png',
+					{ attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Mapbox</a>' }
+				);
+
+				var venue_history = [];
+
+				var fsq = new Foursquare;
+				if ( fsq.access_token ){
+					loading();
+					$("#init").remove();
+					$("#start").remove();
+					getVenueHistory();
+					getUserInfo();
+
+				}else{
+					map = L.map('map')
+					.addLayer(mapboxTiles)
+					.setView(center, zoom);
+					map.zoomControl.setPosition("bottomleft");
+				}
+
+				$("#start").click(function(){
+					fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+				});
+
+
+				//-------------------------------------------------------------
+				function getVenueHistory(){
+					fsq.getRequest(
+						'users/self/venuehistory',
+						function (response){
+							venues = response.response.venues;
+
+							for (var i = 0; i < venues.items.length; i++){
+								var venue = venues.items[i];
+								var location = venue.venue.location;
+								venue_history.push({
+									lat: location.lat,
+									lon: location.lng,
+									value: venue.beenHere + 3
+								});
+							}
+							console.log(venue_history);
+							drawHeatmap();
+						}
+					);
+				}
+
+				
+				// heatmap ----------------------------------------------------
+				function drawHeatmap() {
+					var heatmapLayer = L.TileLayer.heatMap({
+						radius: { value: radius, absolute: false },
+						opacity: 0.8
+					});
+
+					heatmapLayer.setData(venue_history);
+					map = new L.Map('map', {
+						center: center,
+						zoom: zoom,
+						layers: [mapboxTiles, heatmapLayer]
+					});
+					map.zoomControl.setPosition("bottomleft");
+
+					complete();
+				}
+
+
+				function getUserInfo() {
+					var count, first, last;
+					fsq.getRequest(
+						'users/self/checkins',
+						function (response){
+							count = response.response.checkins.count;
+							last = response.response.checkins.items[0].createdAt;
+							fsq.getRequest(
+								'users/self/checkins?sort=oldestfirst',
+								function (response){
+									first = response.response.checkins.items[0].createdAt;
+
+
+									$("#info").html(
+										format_time(first) +
+										" - " +
+										format_time(last) +
+										"<br>" +
+										count + " checkins"
+									);
+
+								}
+							);
+						}
+					);
+				}
+
+
+				function complete(){
+					$("#loading").remove();
+				}
+
+
+				function format_time(time){
+					var date = new Date(time*1000);
+					return date.toLocaleDateString() + " " + date.getHours() + ":" + date.getMinutes();
+				}
+
+
+				function loading() {
+					var loader = {
+
+						width: 100,
+						height: 100,
+
+						stepsPerFrame: 1,
+						trailLength: 1,
+						pointDistance: .025,
+
+						strokeColor: '#05E2FF',
+
+						fps: 20,
+
+						setup: function() {
+							this._.lineWidth = 2;
+						},
+						step: function(point, index) {
+
+							var cx = this.padding + 50,
+							cy = this.padding + 50,
+							_ = this._,
+							angle = (Math.PI/180) * (point.progress * 360);
+
+							this._.globalAlpha = Math.max(.5, this.alpha);
+
+							_.beginPath();
+							_.moveTo(point.x, point.y);
+							_.lineTo(
+							(Math.cos(angle) * 35) + cx,
+							(Math.sin(angle) * 35) + cy
+							);
+							_.closePath();
+							_.stroke();
+
+							_.beginPath();
+							_.moveTo(
+							(Math.cos(-angle) * 32) + cx,
+							(Math.sin(-angle) * 32) + cy
+							);
+							_.lineTo(
+							(Math.cos(-angle) * 27) + cx,
+							(Math.sin(-angle) * 27) + cy
+							);
+							_.closePath();
+							_.stroke();
+
+						},
+						path: [
+							['arc', 50, 50, 40, 0, 360]
+						]
+					};
+
+					var sonic = new Sonic(loader);
+					$("#loading").append(sonic.canvas);
+					sonic.play();
+				}
+
+			});
+		</script>
+	</body>
+</html>
+
