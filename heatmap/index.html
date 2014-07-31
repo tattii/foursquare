@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8 />
+		<title>Dark Map</title>
+		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+		<!--	<script src='https://api.tiles.mapbox.com/mapbox.js/v1.6.4/mapbox.js'></script> -->
+		<script src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
+		<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.css" />
+		<style>
+			body { margin:0; padding:0; }
+			#map { position:absolute; top:0; bottom:0; width:100%; }
+			#get { position:absolute; top:20px; right:20px; width:100px; height:40px; background:#fff; z-index:10001;  }
+		</style>
+	</head>
+	<body>
+		<div id='map'></div>
+			<div id="get">get</div>
+
+		<script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet-src.js"></script>
+		<script src="../foursquare.js"></script>
+		<script src="/foursquare/lib/heatmap/QuadTree.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap-leaflet.js"></script>
+		<script>
+			$(function(){
+				
+				// mapbox -----------------------------------------------------
+				var map;
+				var map_id = 'tattii.j1a9fl0a';
+				var mapboxTiles = L.tileLayer(
+					'https://{s}.tiles.mapbox.com/v3/' + map_id + '/{z}/{x}/{y}.png',
+					{ attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Mapbox</a>' }
+				);
+					
+				var venue_history = {
+					max: 30,
+					data: [
+						{lat: 35.00658012483076, lon: 135.76935946941376, value: 2}
+					]
+				};
+
+				var fsq = new Foursquare;
+				if ( fsq.access_token ){
+					//getVenueHistory();
+					heat();
+
+				}else{
+					map = L.map('map')
+						.addLayer(mapboxTiles)
+						.setView([38.23, 138.933], 6);
+				}
+
+				$("#get").click(function(){
+					fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+				});
+
+
+				// heatmap ----------------------------------------------------
+
+
+				function heat() {
+					var heatmapLayer = L.TileLayer.heatMap({
+						radius: 20,
+						opacity: 0.8
+					});
+
+					heatmapLayer.setData(venue_history.data);
+					map = new L.Map('map', {
+						center: new L.LatLng(38.23, 138.933),
+						zoom: 6,
+						layers: [mapboxTiles, heatmapLayer]
+					});
+				}
+
+				// foursqure --------------------------------------------------
+
+
+				
+				
+				function getVenueHistory(){
+					fsq.getRequest(
+						'users/self/venuehistory',
+						function (response){
+							venues = response.response.venues;
+
+							for (var i = 0; i < venues.items.length; i++){
+								var venue = venues.items[i];
+								var location = venue.venue.location;
+					//			venue_history.data.push({
+					//				lat: location.lat,
+					//				lon: location.lng,
+					//				value: venue.beenHere
+					//			});
+							}
+							console.log(venue_history);
+							heat();
+						}
+					);
+				}
+
+
+
+
+
+
+
+
+
+
+			});
+		</script>
+	</body>
+</html>
