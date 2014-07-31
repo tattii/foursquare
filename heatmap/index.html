@@ -2,9 +2,8 @@
 <html>
 	<head>
 		<meta charset=utf-8 />
-		<title>Dark Map</title>
+		<title>Foursquare - Heatmap</title>
 		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-		<!--	<script src='https://api.tiles.mapbox.com/mapbox.js/v1.6.4/mapbox.js'></script> -->
 		<script src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
 		<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.css" />
 		<style>
@@ -15,7 +14,7 @@
 	</head>
 	<body>
 		<div id='map'></div>
-			<div id="get">get</div>
+		<div id="get">get</div>
 
 		<script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet-src.js"></script>
 		<script src="../foursquare.js"></script>
@@ -24,7 +23,7 @@
 		<script src="/foursquare/lib/heatmap/heatmap-leaflet.js"></script>
 		<script>
 			$(function(){
-				
+
 				// mapbox -----------------------------------------------------
 				var map;
 				var map_id = 'tattii.j1a9fl0a';
@@ -32,23 +31,17 @@
 					'https://{s}.tiles.mapbox.com/v3/' + map_id + '/{z}/{x}/{y}.png',
 					{ attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Mapbox</a>' }
 				);
-					
-				var venue_history = {
-					max: 30,
-					data: [
-						{lat: 35.00658012483076, lon: 135.76935946941376, value: 2}
-					]
-				};
+
+				var venue_history = [];
 
 				var fsq = new Foursquare;
 				if ( fsq.access_token ){
-					//getVenueHistory();
-					heat();
+					getVenueHistory();
 
 				}else{
 					map = L.map('map')
-						.addLayer(mapboxTiles)
-						.setView([38.23, 138.933], 6);
+					.addLayer(mapboxTiles)
+					.setView([38.23, 138.933], 6);
 				}
 
 				$("#get").click(function(){
@@ -57,15 +50,13 @@
 
 
 				// heatmap ----------------------------------------------------
-
-
-				function heat() {
+				function drawHeatmap() {
 					var heatmapLayer = L.TileLayer.heatMap({
-						radius: 20,
+						radius: { value: 10, absolute: false },
 						opacity: 0.8
 					});
 
-					heatmapLayer.setData(venue_history.data);
+					heatmapLayer.setData(venue_history);
 					map = new L.Map('map', {
 						center: new L.LatLng(38.23, 138.933),
 						zoom: 6,
@@ -73,42 +64,30 @@
 					});
 				}
 
-				// foursqure --------------------------------------------------
 
-
-				
-				
 				function getVenueHistory(){
 					fsq.getRequest(
-						'users/self/venuehistory',
-						function (response){
-							venues = response.response.venues;
+					'users/self/venuehistory',
+					function (response){
+						venues = response.response.venues;
 
-							for (var i = 0; i < venues.items.length; i++){
-								var venue = venues.items[i];
-								var location = venue.venue.location;
-					//			venue_history.data.push({
-					//				lat: location.lat,
-					//				lon: location.lng,
-					//				value: venue.beenHere
-					//			});
-							}
-							console.log(venue_history);
-							heat();
+						for (var i = 0; i < venues.items.length; i++){
+							var venue = venues.items[i];
+							var location = venue.venue.location;
+							venue_history.push({
+								lat: location.lat,
+								lon: location.lng,
+								value: venue.beenHere + 2
+							});
 						}
+						console.log(venue_history);
+						drawHeatmap();
+					}
 					);
 				}
-
-
-
-
-
-
-
-
-
 
 			});
 		</script>
 	</body>
 </html>
+
