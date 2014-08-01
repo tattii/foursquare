@@ -23,8 +23,8 @@
 		<script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet-src.js"></script>
 		<script src="../foursquare.js"></script>
 		<script src="/foursquare/lib/heatmap/QuadTree.js"></script>
-		<script src="/foursquare/lib/heatmap/heatmap.js"></script>
-		<script src="/foursquare/lib/heatmap/heatmap-leaflet.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap-retina.js"></script>
+		<script src="/foursquare/lib/heatmap/heatmap-leaflet-retina.js"></script>
 		<script src="/foursquare/lib/sonic.js"></script>
 		<script>
 			$(function(){
@@ -33,11 +33,11 @@
 					zoomControl = true,
 					radius = 11;
 			
-				if ( $(window).width() <= 480 ){
+				if ( $(window).width() <= 640 ){
 					center = [37.405, 137.50];
 					zoom = 5;
 					zoomControl = false;
-					radius = 6;
+					radius = 10;
 				}
 
 
@@ -98,7 +98,8 @@
 				function drawHeatmap() {
 					var heatmapLayer = L.TileLayer.heatMap({
 						radius: { value: radius, absolute: false },
-						opacity: 0.8
+						opacity: 0.8,
+						retina: L.Browser.retina && !L.Browser.android
 					});
 
 					heatmapLayer.setData(venue_history);
@@ -106,7 +107,8 @@
 						center: center,
 						zoom: zoom,
 						layers: [mapboxTiles, heatmapLayer],
-						zoomControl: zoomControl
+						zoomControl: zoomControl,
+						detectRetina: L.Browser.retina
 					});
 					(zoomControl) ? map.zoomControl.setPosition("bottomleft") : 0;
 
