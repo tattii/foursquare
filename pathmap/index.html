@@ -1,0 +1,247 @@
+<!DOCCTYPE HTML>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>Foursquare Pathmap</title>
+	<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+	<script src="http://code.jquery.com/jquery-1.8.0.min.js"></script>
+	<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+	<link rel="stylesheet" href="app.css" />
+</head>
+
+
+<body>
+	<h1>Foursquare Pathmap</h1>
+	<div id="init">Visualize your checkins</div>
+	<div id="info"></div>
+	<div id='map'></div>
+	<div id="start">Start</div>
+	<div id="loading">
+		<div id="loading-info"></div>
+	</div>
+	
+
+	<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet-src.js"></script>
+	<script src="../foursquare.js"></script>
+	<script src="/foursquare/lib/sonic.js"></script>
+	<script>
+		$(function(){
+			var center = [38.23, 138.933],
+				zoom = 6,
+				zoomControl = true,
+				radius = 11;
+		
+			if ( $(window).width() <= 480 ){
+				center = [37.405, 137.50];
+				zoom = 5;
+				zoomControl = false;
+				radius = 6;
+			}
+
+
+			// mapbox -----------------------------------------------------
+			var map_id = 'tattii.j1a9fl0a';
+			var mapboxTiles = L.tileLayer(
+				'https://{s}.tiles.mapbox.com/v3/' + map_id + '/{z}/{x}/{y}.png',
+				{ attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Mapbox</a>' }
+			);
+
+			var map = L.map('map', { zoomControl: zoomControl })
+				.addLayer(mapboxTiles)
+				.setView(center, zoom);
+			(zoomControl) ? map.zoomControl.setPosition("bottomleft") : 0;
+
+
+
+			//-----------------------------------------------------------------
+			var fsq = new Foursquare;
+
+			if ( fsq.access_token ){
+				loading();
+				$("#init").remove();
+				$("#start").remove();
+				getCheckins();
+			}
+
+			$("#start").click(function(){
+				fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+			});
+			
+
+			function getCheckins(){
+				var count = 0,
+					n = 0,
+					checkins = [];
+
+				var iter = function(){
+					_getCheckins(
+						function(next){
+							checkins = checkins.concat(next.items);
+							count = next.count;
+							n += next.items.length;
+
+							$("#loading-info").text("getting... " + n + "/" + count + "checkins");
+							
+							if ( n < count ){
+								iter();
+							}else{
+								drawPath(checkins);
+							}
+						},
+						n
+					);
+				}
+
+				iter();
+			}
+
+			function _getCheckins(callback, offset){
+				fsq.getRequest(
+					'users/self/checkins?limit=250&sort=oldestfirst' + ((offset) ? '&offset=' + offset : ""),
+					function (response){
+						callback(response.response.checkins);
+					}
+				);
+			}
+
+
+
+			//-----------------------------------------------------------------
+			function drawPath(checkins){
+				var min_time = checkins[0].createdAt;
+				var max_time = checkins[checkins.length-1].createdAt;
+
+				for (var i = 0; i < checkins.length-1; i++){
+					var f = checkins[i].venue.location;
+					var t = checkins[i+1].venue.location;
+
+					var path = new L.polyline(
+						[[f.lat, f.lng], [t.lat, t.lng]],
+						{
+							color: gradient((checkins[i].createdAt - min_time) / (max_time - min_time)),
+							weight: 1,
+							opacity: 0.8,
+						}
+					).addTo(map);
+
+
+				}
+				complete();
+			}
+			
+			
+			//-----------------------------------------------------------------
+			var grad = [
+				{ value:0.00, r:255, g:68, b:68 },
+				{ value:0.10, r:255, g:161, b:68 },
+				{ value:0.20, r:255, g:255, b:68 },
+				{ value:0.30, r:161, g:255, b:68 },
+				{ value:0.40, r:68, g:255, b:68 },
+				{ value:0.50, r:68, g:255, b:161 },
+				{ value:0.60, r:68, g:255, b:255 },
+				{ value:0.70, r:68, g:161, b:255 },
+				{ value:0.80, r:68, g:68, b:255 },
+				{ value:0.90, r:161, g:68, b:255 },
+				{ value:1.00, r:255, g:68, b:255 },
+			];
+
+
+			function gradient(x) {
+				var pivot;
+				for (pivot = 0; pivot < grad.length; pivot++){
+					if ( x < grad[pivot].value ){
+						break;
+					}
+				}
+
+				var l = grad[pivot-1];
+				var r = grad[pivot];
+				var delta = (x - grad[pivot-1].value) / (grad[pivot].value - grad[pivot-1].value);
+
+				var color = {
+					r: Math.round( (r.r - l.r) * delta + l.r ),
+					g: Math.round( (r.g - l.g) * delta + l.g ),
+					b: Math.round( (r.b - l.b) * delta + l.b )
+				};
+
+				return "#" + _doubleHex(color.r) + _doubleHex(color.g) + _doubleHex(color.b);
+			}
+
+			function _doubleHex(x) {
+				return ( x < 10 ) ? "0" + x.toString(16) : x.toString(16);
+			}
+
+
+
+			//-----------------------------------------------------------------
+			function loading() {
+				var loader = {
+
+					width: 100,
+					height: 100,
+
+					stepsPerFrame: 1,
+					trailLength: 1,
+					pointDistance: .025,
+
+					strokeColor: '#05E2FF',
+
+					fps: 20,
+
+					setup: function() {
+						this._.lineWidth = 2;
+					},
+					step: function(point, index) {
+
+						var cx = this.padding + 50,
+						cy = this.padding + 50,
+						_ = this._,
+						angle = (Math.PI/180) * (point.progress * 360);
+
+						this._.globalAlpha = Math.max(.5, this.alpha);
+
+						_.beginPath();
+						_.moveTo(point.x, point.y);
+						_.lineTo(
+						(Math.cos(angle) * 35) + cx,
+						(Math.sin(angle) * 35) + cy
+						);
+						_.closePath();
+						_.stroke();
+
+						_.beginPath();
+						_.moveTo(
+						(Math.cos(-angle) * 32) + cx,
+						(Math.sin(-angle) * 32) + cy
+						);
+						_.lineTo(
+						(Math.cos(-angle) * 27) + cx,
+						(Math.sin(-angle) * 27) + cy
+						);
+						_.closePath();
+						_.stroke();
+
+					},
+					path: [
+						['arc', 50, 50, 40, 0, 360]
+					]
+				};
+
+				var sonic = new Sonic(loader);
+				$("#loading").append(sonic.canvas);
+				sonic.play();
+			}
+	
+			function complete(){
+				$("#loading").remove();
+			}
+
+		});
+
+
+	</script>
+</body>
+
+</html>
+
