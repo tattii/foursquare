@@ -76,6 +76,10 @@
 					fsq.getRequest(
 						'users/self/venuehistory',
 						function (response){
+							if ( response.meta.errorDetail ){
+								$("#info").text("Error:" + response.meta.code + " " + response.meta.errorDetail)
+									.css({ color: "red" });
+							}
 							venues = response.response.venues;
 
 							for (var i = 0; i < venues.items.length; i++){
@@ -87,7 +91,6 @@
 									value: venue.beenHere + 3
 								});
 							}
-							console.log(venue_history);
 							drawHeatmap();
 						}
 					);

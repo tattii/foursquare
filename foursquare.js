@@ -63,7 +63,7 @@ var Foursquare = (function(){
 		var m = date.getMonth() + 1;
 		var d = date.getDate();
 
-		return y
+		return String(y)
 			+ (( m < 10 ) ? '0' + m : m)
 			+ (( d < 10 ) ? '0' + d : d);
 	}
