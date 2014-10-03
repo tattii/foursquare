@@ -1,0 +1,81 @@
+<!DOCCTYPE HTML>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>foursquare / venue history</title>
+</head>
+
+
+<body>
+	<h1>get venue history -> YDF</h1>
+
+	<button id="get">get</button>
+	<br>
+	<div id="box"></div>
+
+	<a id="download" target="_blank">download</a>
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script src="../foursquare.js"></script>
+	<script>
+		$(function(){
+			var fsq = new Foursquare;
+			if ( fsq.access_token ){
+				getVenueHistory();
+			}
+
+			$("#get").click(function(){
+				fsq.authenticate("HPVSYJTAZFLQHP5U2EQNBUG0VZ034U4T4YVG3QPSCAN0RXFV");
+			});
+			
+			
+			function getVenueHistory(){
+				fsq.getRequest(
+					'users/self/venuehistory',
+					function (response){
+						listVenueHistory(response.response.venues);
+					}
+				);
+			}
+
+			function listVenueHistory(venues){
+				var content = document.createElement("YDF");
+
+				for (var i = 0; i < venues.items.length; i++){
+					var venue = venues.items[i];
+
+					var feature = document.createElement("Feature");
+					var geometry = document.createElement("Geometry");
+					var coordinates = document.createElement("Coordinates");
+					$(coordinates).text( venue.venue.location.lat +","+ venue.venue.location.lng );
+					$(geometry).append(coordinates);
+					$(feature).append(geometry);
+					var name = document.createElement("Name");
+					$(name).text(venue.venue.name);
+					$(feature).append(name);
+
+					for (var j = 0; j < venue.beenHere; j++ ){
+						$(content).append( feature );
+					}
+				}
+				
+
+				// xml -> local
+				var xml_serializer = new XMLSerializer();
+				var blob = new Blob([ xml_serializer.serializeToString(content)  ], { "type" : "text.xml" });
+
+				window.URL = window.URL || window.webkitURL;
+				$("#download").attr("href", window.URL.createObjectURL(blob));
+				$("#download").attr("download", "tmp.xml");
+			}
+
+
+		});
+
+
+	</script>
+</body>
+
+</html>
+
